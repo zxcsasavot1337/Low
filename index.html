@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Express Finance — Моментальный подбор займов</title>
+    
+    <!-- Подключаем премиальный шрифт Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ==========================================================================
+           1. UI KIT & СТИЛИ ИНТЕРФЕЙСА (Стиль Apple, Stripe, Revolut)
+           ========================================================================== */
+        :root {
+            --bg-main: #0B0F19;         /* Глубокий индиго-графит */
+            --bg-card: #161B26;         /* Карточки с эффектом стекла */
+            --text-primary: #FFFFFF;    /* Белый заголовок */
+            --text-secondary: #8F9CAE;  /* Приглушенный серый текст */
+            --text-muted: #4B5563;     /* Темно-серый для реквизитов */
+            --accent-mint: #00F5D4;     /* Мятный неоновый акцент */
+            --accent-blue: #3B82F6;     /* Электро-синий для ползунков */
+            --success: #10B981;         /* Изумрудный зеленый */
+            --danger: #EF4444;          /* Красный для плашек и ставок */
+            --purple: #A855F7;          /* Фиолетовый для тега "Рекомендуем" */
+            --font-main: 'Inter', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 1140px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        section {
+            padding: 50px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        h1, h2, h3 {
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        /* Финтех кнопки */
+        .btn-primary {
+            background-color: var(--accent-mint);
+            color: #0B0F19;
+            border: none;
+            padding: 12px 24px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(0, 245, 212, 0.4);
+            background-color: #ffffff;
+        }
+
+        /* ШАПКА */
+        .site-header {
+            background: rgba(11, 15, 25, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-row { display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 22px; font-weight: 700; }
+        .logo span { color: var(--accent-mint); }
+        .header-note { font-size: 11px; color: var(--text-secondary); text-align: right; }
+
+        /* БЛОК 1: HERO + КАЛЬКУЛЯТОР */
+        .hero { text-align: center; padding: 40px 0; }
+        .hero h1 { font-size: 38px; margin-bottom: 12px; background: linear-gradient(135deg, #FFF 0%, #8F9CAE 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero p { font-size: 15px; color: var(--text-secondary); max-width: 600px; margin: 0 auto 28px; }
+
+        .calc-widget {
+            background: var(--bg-card); border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px; padding: 32px; max-width: 540px; margin: 0 auto; backdrop-filter: blur(12px);
+        }
+        .calc-widget-group { margin-bottom: 20px; text-align: left; }
+        .calc-label-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; color: var(--text-secondary); }
+        .calc-value { color: var(--text-primary); font-weight: 600; }
+        
+        .slider { -webkit-appearance: none; width: 100%; height: 6px; border-radius: 3px; background: #242B3A; outline: none; }
+        .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent-blue); cursor: pointer; transition: transform 0.1s; }
+        .slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+        .calc-live-indicator { font-size: 14px; color: var(--text-secondary); margin: 18px 0; background: rgba(255, 255, 255, 0.02); padding: 12px; border-radius: 10px; }
+        .calc-live-indicator span { color: var(--accent-mint); font-weight: 600; }
+
+        /* БЛОК 2: КВИЗ-ПОДБОРЩИК */
+        .quiz-card { background: var(--bg-card); border: 1px solid rgba(255, 255, 255, 0.05); max-width: 640px; margin: 0 auto; border-radius: 24px; padding: 32px; text-align: center; }
+        .quiz-step { display: none; }
+        .quiz-step.active { display: block; animation: fadeIn 0.4s ease forwards; }
+        .quiz-step h3 { font-size: 18px; margin-bottom: 20px; }
+        .quiz-options { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .quiz-opt { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); padding: 16px; border-radius: 12px; cursor: pointer; transition: all 0.2s; font-weight: 500; }
+        .quiz-opt:hover { border-color: var(--accent-blue); background: rgba(255,255,255,0.04); }
+        .quiz-loading { display: none; padding: 20px 0; }
+        .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent-mint); border-radius: 50%; margin: 0 auto 12px; animation: spin 1s linear infinite; }
+
+        /* БЛОК 3: ВИТРИНА ОФФЕРОВ (СТРОЧНЫЙ ФИНТЕХ-СТИЛЬ) */
+        .filter-bar { display: flex; justify-content: center; gap: 8px; margin-bottom: 32px; flex-wrap: wrap; }
+        .filter-btn { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); color: var(--text-secondary); padding: 10px 18px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; }
+        .filter-btn:hover, .filter-btn.active { background: #FFF; color: #0B0F19; border-color: #FFF; }
+
+        .catalog-list { display: flex; flex-direction: column; gap: 16px; }
+        
+        /* РОСКОШНЫЙ ВИДЖЕТ КАРТОЧКИ */
+        .mfo-row-card {
+            background: var(--bg-card); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px;
+            padding: 20px 24px; display: grid; grid-template-columns: 1.8fr 2.2fr 2fr 1.5fr; align-items: center;
+            gap: 24px; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); animation: fadeIn 0.4s ease forwards;
+            position: relative;
+        }
+        .mfo-row-card:hover { transform: translateY(-2px); border-color: var(--accent-mint); box-shadow: 0 10px 30px rgba(0, 245, 212, 0.05); }
+
+        .meta-zone { display: flex; flex-direction: column; gap: 4px; }
+        .brand-name-row { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .brand-legal-row { font-size: 11px; color: var(--text-secondary); }
+        
+        .styled-info-banner {
+            background: rgba(255, 255, 255, 0.02); border-left: 3px solid var(--accent-mint);
+            padding: 8px 12px; border-radius: 0 8px 8px 0; font-size: 12px; color: #FFF; font-weight: 500;
+        }
+
+        .metrics-zone-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .m-block { display: flex; flex-direction: column; }
+        .m-label-text { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.03em; }
+        .m-value-text { font-size: 15px; font-weight: 600; }
+        .m-value-text.red-txt { color: var(--danger); }
+        .m-value-text.green-txt { color: var(--accent-mint); }
+
+        .action-zone-row { display: flex; flex-direction: column; gap: 6px; text-align: right; }
+        .law-erid-text { font-size: 9px; color: #556173; line-height: 1.3; }
+
+        /* Премиальные бейджи */
+        .mini-badge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 40px; text-transform: uppercase; letter-spacing: 0.03em; }
+        .mb-hit { background: var(--danger); color: #fff; }
+        .mb-pop { background: var(--success); color: #fff; }
+        .mb-often { background: var(--accent-blue); color: #fff; }
+        .mb-best { background: var(--purple); color: #fff; }
+
+        .disclaimer-box-clean { background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.04); padding: 20px; border-radius: 12px; font-size: 12px; color: #8F9CAE; margin-top: 30px; }
+        .disclaimer-box-clean strong { color: var(--accent-mint); }
+
+        /* ПОДВАЛ */
+        footer { background: #060810; padding: 50px 0; border-top: 1px solid rgba(255,255,255,0.05); font-size: 11px; color: var(--text-secondary); margin-top: 50px; }
+        .footer-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #3A4A6A; margin-bottom: 24px; }
+        .footer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin-top: 20px; }
+        .footer-card { background: rgba(255,255,255,0.01); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.02); }
+        .fc-head { font-weight: 600; color: #FFF; margin-bottom: 4px; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 992px) {
+            .mfo-row-card { grid-template-columns: 1fr; gap: 16px; padding: 20px; }
+            .action-zone-row { text-align: left; }
+            .filter-bar { justify-content: flex-start; overflow-x: auto; white-space: nowrap; padding-bottom: 6px; }
+            .quiz-options { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+  <!-- ШАПКА -->
+  <header class="site-header">
+    <div class="container header-row">
+      <div class="logo">🚀 Smart<span>Express</span></div>
+      <div class="header-note">В соответствии с требованиями ст. 18.1 ФЗ «О рекламе». Информация актуальна на 2026 год.</div>
+    </div>
+  </header>
+
+  <!-- БЛОК 1: HERO SECTION + КАЛЬКУЛЯТОР-ПОЛЗУНОК -->
+  <section class="hero container">
+    <h1>Моментальный подбор онлайн-займов</h1>
+    <p>Интеллектуальная система круглосуточного экспресс-кредитования. Одобрение автоматическими роботами МФО за 2 минуты.</p>
+    
+    <div class="calc-widget">
+        <div class="calc-widget-group">
+            <div class="calc-label-row"><span>Сумма займа</span><span class="calc-value" id="js-amount-txt">15 000 ₽</span></div>
+            <input type="range" id="js-slider-amount" class="slider" min="1000" max="30000" step="1000" value="15000">
+        </div>
+        <div class="calc-widget-group">
+            <div class="calc-label-row"><span>Срок займа</span><span class="calc-value" id="js-period-txt">15 дней</span></div>
+            <input type="range" id="js-slider-period" class="slider" min="1" max="30" step="1" value="15">
+        </div>
+        <div class="calc-live-indicator">
+            По вашему запросу найдено: <span id="js-live-offers-counter">11 предложений</span>. Базовая ставка: <span>от 0% в день</span>
+        </div>
+        <a href="#catalog-anchor" class="btn-primary">Показать доступные варианты →</a>
+    </div>
+  </section>
+
+  <!-- БЛОК 2: ИНТЕРАКТИВНЫЙ КВИЗ-ПОДБОРЩИК -->
+  <section class="container">
+    <div class="quiz-card" id="quiz-container">
+        <!-- Шаг 1 -->
+        <div class="quiz-step active" data-step="1">
+            <h3>1. Какая скорость получения денег вам необходима?</h3>
+            <div class="quiz-options">
+                <div class="quiz-opt" onclick="nextQuizStep(1)">До 5 минут (Срочно)</div>
+                <div class="quiz-opt" onclick="nextQuizStep(1)">В течение получаса</div>
+                <div class="quiz-opt" onclick="nextQuizStep(1)">Не имеет значения</div>
+                <div class="quiz-opt" onclick="nextQuizStep(1)">Главное — без отказов</div>
+            </div>
+        </div>
+        <!-- Шаг 2 -->
+        <div class="quiz-step" data-step="2">
+            <h3>2. Были ли у вас ранее займы в представленных МФО?</h3>
+            <div class="quiz-options">
+                <div class="quiz-opt" onclick="nextQuizStep(2)">Нет, обращаюсь впервые (Доступно 0%)</div>
+                <div class="quiz-opt" onclick="nextQuizStep(2)">Да, брал в 1-2 компаниях</div>
+                <div class="quiz-opt" onclick="nextQuizStep(2)">Да, брал во многих МФО</div>
+                <div class="quiz-opt" onclick="nextQuizStep(2)">Не помню / Затрудняюсь ответить</div>
+            </div>
+        </div>
+        <!-- Шаг 3 -->
+        <div class="quiz-step" data-step="3">
+            <h3>3. Куда зачислить одобренные средства?</h3>
+            <div class="quiz-options">
+                <div class="quiz-opt" onclick="finishQuiz()">Моментально по номеру телефона (СБП)</div>
+                <div class="quiz-opt" onclick="finishQuiz()">На банковскую карту (МИР)</div>
+                <div class="quiz-opt" onclick="finishQuiz()">На электронный кошелек ЮMoney</div>
+                <div class="quiz-opt" onclick="finishQuiz()">Наличными через систему Contact</div>
+            </div>
+        </div>
+        <!-- Лоадер -->
+        <div class="quiz-loading" id="quiz-loader">
+            <div class="spinner"></div>
+            <p style="color: var(--text-secondary); font-size: 14px;">Алгоритм формирует список со 100% одобрением под вашу анкету...</p>
+        </div>
+    </div>
+  </section>
+
+  <!-- БЛОК 3: ВИТРИНА ПРЕДЛОЖЕНИЙ -->
+  <section id="catalog-anchor" class="container">
+    <div class="filter-bar">
+        <button class="filter-btn active" onclick="applyFilter('all', this)">Все предложения (11)</button>
+        <button class="filter-btn" onclick="applyFilter('zero', this)">Первый займ под 0%</button>
+        <button class="filter-btn" onclick="applyFilter('fast', this)">Одобрение за 2 мин</button>
+        <button class="filter-btn" onclick="applyFilter('high-approve', this)">Максимальный апрув</button>
+    </div>
+
+    <div class="catalog-list" id="catalog-list-grid">
+        
+        <!-- MoneyMan -->
+        <div class="mfo-row-card" data-cats="all zero high-approve">
+          <div class="meta-zone">
+            <div class="brand-name-row">MoneyMan <span class="mini-badge mb-often">🎯 РЕКОМЕНДУЕМ</span></div>
+            <div class="brand-legal-row">ООО МФК «Мани Мен»</div>
+          </div>
+          <div class="styled-info-banner">📊 Оптимален для средней и выше средней КИ</div>
+          <div class="metrics-zone-row">
+            <div class="m-block"><span class="m-label-text">Лимит личный</span><span class="m-value-text">до 30 000 ₽</span></div>
+            <div class="m-block"><span class="m-label-text">Ставка / Вероятн.</span><span class="m-value-text red-txt">0,8% / 80%</span></div>
+          </div>
+          <div class="action-zone-row">
+            <a class="btn-primary" href="https://t.fincpanetwork.ru/click/91237/101?erid=2W5zFGacKGm" target="_blank" rel="nofollow noopener">Получить деньги →</a>
+            <div class="law-erid-text">Реклама · erid: 2W5zFGacKGm · ООО МФК «Мани Мен»</div>
+          </div>
+        </div>
+
+        <!-- Lime -->
+        <div class="mfo-row-card" data-cats="all zero high-approve">
+          <div class="meta-zone">
+            <div class="brand-name-row">Lime <span class="mini-badge mb-hit">🔥 ХИТ</span></div>
+            <div class="brand-legal-row">ООО МФК «Лайм-Займ»</div>
+          </div>
+          <div class="styled-info-banner">📊 Автоодобрение даже при испорченной КИ</div>
+          <div class="metrics-zone-row">
+            <div class="m-block"><span class="m-label-text">Лимит личный</span><span class="m-value-text">до 10 000 ₽</span></div>
+            <div class="m-block"><span class="m-label-text">Ставка / Вероятн.</span><span class="m-value-text red-txt">0,8% / 92%</span></div>
+          </div>
+          <div class="action-zone-row">
+            <a class="btn-primary" href="https://go.leadgid.ru/aff_c?aff_id=145486&offer_id=6296&p=10976&erid=LjN8KUyhr" target="_blank" rel="nofollow noopener">Получить деньги →</a>
+            <div class="law-erid-text">Реклама · erid: LjN8KUyhr · ООО МФК «Лайм-Займ»</div>
+          </div>
+        </div>
+
+        <!-- Надо Денег -->
+        <div class="mfo-row-card" data-cats="all zero high-approve fast">
+          <div class="meta-zone">
+            <div class="brand-name-row">Надо Денег <span class="mini-badge mb-best">⭐ ЛУЧШЕЕ</span></div>
+            <div class="brand-legal-row">ООО МФК «Надо Денег»</div>
+          </div>
+          <div class="styled-info-banner">📊 Одобрение с просрочками и низким ПКР</div>
+          <div class="metrics-zone-row">
+            <div class="m-block"><span class="m-label-text">Лимит личный</span><span class="m-value-text">до 10 000 ₽</span></div>
+            <div class="m-block"><span class="m-label-text">Ставка / Вероятн.</span><span class="m-value-text red-txt">0,8% / 90%</span></div>
+          </div>
+          <div class="action-zone-row">
+            <a class="btn-primary" href="https://t-cpa.ru/49jFrM?erid=2W5zFJ97FJY" target="_blank" rel="nofollow noopener">Получить деньги →</a>
+            <div class="law-erid-text">Реклама · erid: 2W5zFJ97FJY · ООО МФК «Надо Денег»</div>
+          </div>
+        </div>
+
+        <!-- Займер -->
+        <div class="mfo-row-card" data-cats="all zero high-approve">
+          <div class="meta-zone">
+            <div class="brand-name-row">Займер <span class="mini-badge mb-pop">👍 ПОПУЛЯРНОЕ</span></div>
+            <div class="brand-legal-row">ПАО МФК «Займер»</div>
+          </div>
+          <div class="styled-info-banner">📊 Автоодобрение при средней и хорошей КИ</div>
+          <div class="metrics-zone-row">
+            <div class="m-block"><span class="m-label-text">Лимит личный</span><span class="m-value-text">до 10 000 ₽</span></div>
+            <div class="m-block"><span class="m-label-text">Ставка / Вероятн.</span><span class="m-value-text red-txt">0,8% / 88%</span></div>
+          </div>
+          <div class="action-zone-row">
+            <a class="btn-primary" href="https://t.fincpanetwork.ru/click/91237/15?erid=2W5zFHwA2h6" target="_blank" rel="nofollow noopener">Получить деньги →</a>
+            <div class="law-erid-text">Реклама · erid: 2W5zFHwA2h6 · ПАО МФК «Займер»</div>
+          </div>
+        </div>
+
+        <!-- Турбозайм -->
+        <div class="mfo-row-card" data-cats="all zero fast">
+          <div class="meta-zone">
+            <div class="brand-name-row">Турбозайм <span class="mini-badge mb-often">🎯 РЕКОМЕНДУЕМ</span></div>
+            <div class="brand-legal-row">ООО МКК «Турбозайм»</div>
+          </div>
+          <div class="styled-info-banner">📊 Подходит при нейтральной и средней КИ</div>
+          <div class="metrics-zone-row">
+            <div class="m-block"><span class="m-label-text">Лимит личный</span><span class="m-value-text">до 10 000 ₽</span></div>
+            <div class="m-block"><span class="m-label-text">Ставка / Вероятн.</span><span class="m-value-text red-txt">0,8% / 82%</span></div>
+          </div>
+          <div class="action-zone-row">
+            <a class="btn-primary" href="https://t.fincpanetwork.ru/click/91237/14?erid=2W5zFHvzYLZ" target="_blank" rel="nofollow noopener">Получить деньги →</a>
+            <div class="law-erid-text">Реклама · erid: 2W5zFHvzYLZ · ООО МКК «Турбозайм»</div>
+          </div>
+        </div>
+
+        <!-- Zaymigo -->
+        <div class="mfo-row-card" data-cats="all high-approve">
+          <div class="meta-zone">
+            <div class="brand-name-row">Zaymigo <span class="mini-badge mb-pop">👍 ПОПУЛЯРНОЕ</span></div>
+            <div class="brand-legal-row">ООО МФК «Займиго»</div>
+          </div>
+          <div class="styled-info-banner">📊 Кредитная история не имеет значения</div>
+          <div class="metrics-zone-row">
+            <div class="m-block"><span class="m-label-text">Лимит личный</span><span class="m-value-text">до 10 000 ₽</span></div>
+            <div class="m-block"><span class="m-label-text">Ставка / Вероятн.</span><span class="m-value-text red-txt">0,8% / 85%</span></div>
+          </div>
+          <div class="action-zone-row">
+            <a class="btn-primary" href="https://go.leadgid.ru/aff_c?aff_id=145486&offer_id=2661&p=10976&erid=2W5zFJ97FJY" target="_blank" rel="nofollow noopener">Получить деньги →</a>
+            <div class="law-erid-text">Реклама · erid: 2W5zFJ97FJY · ООО МФК «Займиго»</div>
+          </div>
+        </div>
+
+        <!-- СрочноДеньги -->
+        <div class="mfo-row-card" data-cats="all fast">
+          <div class="meta-zone">
+            <div class="brand-name-row">СрочноДеньги <span class="mini-badge mb-often">⚡ БЫСТРЫЙ ВЫБОР</span></div>
+            <div class="brand-legal-row">ООО МКК «Срочноденьги»</div>
+          </div>
+          <div class="styled-info-banner">📊 Рассматривают заявки с просрочками и низким ПКР</div>
+          <div class="metrics-zone-row">
+            <div class="m-block"><span class="m-label-text">Лимит личный</span><span class="m-value-text">до 10 000 ₽</span></div>
+            <div class="m-block"><span class="m-label-text">Ставка / Вероятн.</span><span class="m-value-text red-txt">0,8% / 80%</span></div>
+          </div>
+          <div class="action-zone-row">
+            <a class="btn-primary" href="https://t.fincpanetwork.ru/click/91237/38?erid=LjN8Kaxif" target="_blank" rel="nofollow noopener">Получить деньги →</a>
+            <div class="law-erid-text">Реклама · erid: LjN8Kaxif · ООО МКК «Срочноденьги»</div>
+          </div>
+        </div>
+
+        <!-- МигКредит -->
+        <div class="mfo-row-card" data-cats="all high-approve">
+          <div class="meta-zone">
+            <div class="brand-name-row">МигКредит <span class="mini-badge mb-pop">👍 ПОПУЛЯРНОЕ</span></div>
+            <div class="brand-legal-row">ООО МФК «МигКредит»</div>
+          </div>
+          <div class="styled-info-banner">📊 Одобряют с низким ПКР и закрытыми просрочками</div>
+          <div class="metrics-zone-row">
+            <div class="m-block"><span class="m-label-text">Лимит личный</span><span class="m-value-text">до 10 000 ₽</span></div>
+            <div class="m-block"><span class="m-label-text">Ставка / Вероятн.</span><span class="m-value-text red-txt">0,8% / 78%</span></div>
+          </div>
+          <div class="action-zone-row">
+            <a class="btn-primary" href="https://t.fincpanetwork.ru/click/91237/450?erid=2W5zFHt2Zms" target="_blank" rel="nofollow noopener">Получить деньги →</a>
+            <div class="law-erid-text">Реклама · erid: 2W5zFHt2Zms · ООО МФК «МигКредит»</div>
+          </div>
+        </div>
+
+        <!-- Webbankir -->
+        <div class="mfo-row-card" data-cats="all zero high-approve fast">
+          <div class="meta-zone">
+            <div class="brand-name-row">Webbankir <span class="mini-badge mb-best">⭐ ЛУЧШЕЕ</span></div>
+            <div class="brand-legal-row">ООО МФК «Вэббанкир»</div>
+          </div>
+          <div class="styled-info-banner">📊 Кредитная история не влияет на решение</div>
+          <div class="metrics-zone-row">
+            <div class="m-block"><span class="m-label-text">Лимит личный</span><span class="m-value-text">до 10 000 ₽</span></div>
+            <div class="m-block"><span class="m-label-text">Ставка / Вероятн.</span><span class="m-value-text red-txt">0,8% / 92%</span></div>
+          </div>
+          <div class="action-zone-row">
+            <a class="btn-primary" href="https://t.fincpanetwork.ru/click/91237/77?erid=LjN8JwPDS" target="_blank" rel="nofollow noopener">Получить деньги →</a>
+            <div class="law-erid-text">Реклама · erid: LjN8JwPDS · ООО МФК «Вэббанкир»</div>
+          </div>
+        </div>
+
+        <!-- JoyMoney -->
+        <div class="mfo-row-card" data-cats="all zero high-approve">
+          <div class="meta-zone">
+            <div class="brand-name-row">JoyMoney <span class="mini-badge mb-often">🎯 РЕКОМЕНДУЕМ</span></div>
+            <div class="brand-legal-row">ООО МФК «Джой Мани»</div>
+          </div>
+          <div class="styled-info-banner">📊 Лимит до 10 000 ₽ при средней КИ</div>
+          <div class="metrics-zone-row">
+            <div class="m-block"><span class="m-label-text">Лимит личный</span><span class="m-value-text">до 10 000 ₽</span></div>
+            <div class="m-block"><span class="m-label-text">Ставка / Вероятн.</span><span class="m-value-text red-txt">0,8% / 85%</span></div>
+          </div>
+          <div class="action-zone-row">
+            <a class="btn-primary" href="https://t-cpa.ru/sw5WE?erid=2RanymXEPmD" target="_blank" rel="nofollow noopener">Получить деньги →</a>
+            <div class="law-erid-text">Реклама · erid: 2RanymXEPmD · ООО МФК «Джой Мани»</div>
+          </div>
+        </div>
+
+        <!-- Белка Кредит -->
+        <div class="mfo-row-card" data-cats="all zero high-approve">
+          <div class="meta-zone">
+            <div class="brand-name-row">Белка Кредит <span class="mini-badge mb-hit">🔥 ХИТ</span></div>
+            <div class="brand-legal-row">ООО МКК «Финмодель»</div>
+          </div>
+          <div class="styled-info-banner">📊 Одобряют при низком кредитном рейтинге и просрочках</div>
+          <div class="metrics-zone-row">
+            <div class="m-block"><span class="m-label-text">Лимит личный</span><span class="m-value-text">до 10 000 ₽</span></div>
+            <div class="m-block"><span class="m-label-text">Ставка / Вероятн.</span><span class="m-value-text red-txt">0,8% / 90%</span></div>
+          </div>
+          <div class="action-zone-row">
+            <a class="btn-primary" href="https://t.fincpanetwork.ru/click/91237/918?erid=2W5zFK43c2V" target="_blank" rel="nofollow noopener">Получить деньги →</a>
+            <div class="law-erid-text">Реклама · erid: 2W5zFK43c2V · ООО МКК «Финмодель»</div>
+          </div>
+        </div>
+
+    </div>
+
+    <div class="disclaimer-box-clean">
+        <strong>⚠ Официальное уведомление:</strong> Все финансовые партнеры на сайте обладают государственными лицензиями ЦБ РФ. Базовая процентная ставка составляет от 0% до 0.8% в день (182%–292% годовых). Скоринг-системы МФО осуществляют обработку заявок полностью автоматически в круглосуточном режиме. Сервис предоставляет бесплатные справочные услуги.
+    </div>
+  </section>
+
+  <!-- ПОДВАЛ С РЕКВИЗИТАМИ -->
+  <footer>
+    <div class="container">
+      <div class="footer-title">🌌 Реестровые данные лицензированных участников рынка</div>
+      <div class="footer-grid">
+        <div class="footer-card"><div class="fc-head">ООО МФК «Мани Мен»</div><div class="fc-line">ИНН: 7704784072</div><div class="fc-line">Лицензия ЦБ № 2110177000478</div></div>
+        <div class="footer-card"><div class="fc-head">ООО МФК «Лайм-Займ»</div><div class="fc-line">ИНН: 5407973316</div><div class="fc-line">Лицензия ЦБ № 1903550009325</div></div>
+        <div class="footer-card"><div class="fc-head">ООО МФК «Надо Денег»</div><div class="fc-line">ИНН: 9719060559</div><div class="fc-line">Лицензия ЦБ № 2403045010024</div></div>
+        <div class="footer-card"><div class="fc-head">ПАО МФК «Займер»</div><div class="fc-line">ИНН: 5406836941</div><div class="fc-line">Лицензия ЦБ № 651303532004088</div></div>
+        <div class="footer-card"><div class="fc-head">ООО МКК «Турбозайм»</div><div class="fc-line">ИНН: 7702820127</div><div class="fc-line">Лицензия ЦБ № 651303045003951</div></div>
+        <div class="footer-card"><div class="fc-head">ООО МФК «Займиго»</div><div class="fc-line">ИНН: 7705954143</div><div class="fc-line">Государственный реестр ЦБ РФ</div></div>
+        <div class="footer-card"><div class="fc-head">ООО МКК «Срочноденьги»</div><div class="fc-line">ИНН: 5260271530</div><div class="fc-line">Лицензия ЦБ № 2110552000304</div></div>
+        <div class="footer-card"><div class="fc-head">ООО МФК «МигКредит»</div><div class="fc-line">ИНН: 7715825027</div><div class="fc-line">Лицензия ЦБ № 2110177000209</div></div>
+        <div class="footer-card"><div class="fc-head">ООО МФК «Вэббанкир»</div><div class="fc-line">ИНН: 7733812126</div><div class="fc-line">Лицензия ЦБ № 2120177002077</div></div>
+        <div class="footer-card"><div class="fc-head">ООО МФК «Джой Мани»</div><div class="fc-line">ИНН: 5407496776</div><div class="fc-line">Лицензия ЦБ № 651403550005450</div></div>
+        <div class="footer-card"><div class="fc-head">ООО МКК «Финмодель»</div><div class="fc-line">ИНН: 9721231466</div><div class="fc-line">Лицензия ЦБ № 2403045010054</div></div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // --- 1. Калькулятор-ползунок ---
+    const amSlider = document.getElementById('js-slider-amount');
+    const peSlider = document.getElementById('js-slider-period');
+    const amOutput = document.getElementById('js-amount-txt');
+    const peOutput = document.getElementById('js-period-txt');
+    const liveIndicator = document.getElementById('js-live-offers-counter');
+
+    function updateCalculator() {
+        amOutput.textContent = parseInt(amSlider.value).toLocaleString('ru-RU') + ' ₽';
+        peOutput.textContent = peSlider.value + ' ' + handleDayWords(parseInt(peSlider.value));
+        
+        let availableCount = 11 - Math.floor(amSlider.value / 3500);
+        if (availableCount < 3) availableCount = 3;
+        liveIndicator.textContent = availableCount + ' ' + handleOfferWords(availableCount);
+    }
+
+    function handleDayWords(n) {
+        if (n % 10 === 1 && n % 100 !== 11) return 'день';
+        if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return 'дня';
+        return 'дней';
+    }
+
+    function handleOfferWords(n) {
+        if (n % 10 === 1 && n % 100 !== 11) return 'предложение';
+        if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return 'предложения';
+        return 'предложений';
+    }
+
+    amSlider.addEventListener('input', updateCalculator);
+    peSlider.addEventListener('input', updateCalculator);
+
+    // --- 2. Логика Квиза ---
+    function nextQuizStep(stepIndex) {
+        document.querySelector(`.quiz-step[data-step="${stepIndex}"]`).classList.remove('active');
+        const nextStep = document.querySelector(`.quiz-step[data-step="${stepIndex + 1}"]`);
+        if (nextStep) nextStep.classList.add('active');
+    }
+
+    function finishQuiz() {
+        document.querySelector('.quiz-step[data-step="3"]').classList.remove('active');
+        const loader = document.getElementById('quiz-loader');
+        loader.style.display = 'block';
+
+        setTimeout(() => {
+            loader.style.display = 'none';
+            document.getElementById('quiz-container').innerHTML = `
+                <div style="animation: fadeIn 0.4s ease forwards;">
+                    <h3 style="color:var(--accent-mint); margin-bottom:8px;">✔ Скоринг-проверка успешно пройдена</h3>
+                    <p style="color:var(--text-secondary); margin-bottom:20px;">Роботы МФО подтвердили готовность выдать средства мгновенно.</p>
+                    <a href="#catalog-anchor" class="btn-primary" onclick="applyQuizFilter()">Показать результаты подбора</a>
+                </div>
+            `;
+        }, 1800);
+    }
+
+    function applyQuizFilter() {
+        applyFilter('high-approve', document.querySelector('.filter-bar button:nth-child(4)'));
+    }
+
+    // --- 3. Моментальная фильтрация ---
+    function applyFilter(categoryTag, btnSource) {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btnSource.classList.add('active');
+
+        const rows = document.querySelectorAll('.mfo-row-card');
+        
+        rows.forEach(row => {
+            row.style.opacity = '0';
+            row.style.transform = 'scale(0.98)';
+            
+            setTimeout(() => {
+                const cats = row.getAttribute('data-cats') || '';
+                if (categoryTag === 'all' || cats.includes(categoryTag)) {
+                    row.style.display = 'grid';
+                    setTimeout(() => {
+                        row.style.opacity = '1';
+                        row.style.transform = 'scale(1)';
+                    }, 40);
+                } else {
+                    row.style.display = 'none';
+                }
+            }, 150);
+        });
+    }
+  </script>
+</body>
+</html>
